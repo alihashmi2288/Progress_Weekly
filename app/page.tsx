@@ -3,7 +3,11 @@ import { Navbar } from "@/components/layout/Navbar"
 import Link from "next/link"
 import { ArrowRight, CheckCircle2, Calendar, TrendingUp } from "lucide-react"
 
-export default function LandingPage() {
+import { auth } from "@/auth"
+
+export default async function LandingPage() {
+  const session = await auth()
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -28,13 +32,22 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/signup" className="flex items-center gap-2 bg-[#65a34e] text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-[#65a34e]/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-            Start Planning Free
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-          <Link href="/login" className="px-8 py-4 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors">
-            Existing User?
-          </Link>
+          {session ? (
+            <Link href="/dashboard" className="flex items-center gap-2 bg-[#65a34e] text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-[#65a34e]/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              Go to Dashboard
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          ) : (
+            <>
+              <Link href="/signup" className="flex items-center gap-2 bg-[#65a34e] text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-[#65a34e]/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                Start Planning Free
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link href="/login" className="px-8 py-4 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors">
+                Existing User?
+              </Link>
+            </>
+          )}
         </div>
       </section>
 

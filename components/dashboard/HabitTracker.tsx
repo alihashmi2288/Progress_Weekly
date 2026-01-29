@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 // import { toggleHabit, createHabit } from "@/app/actions" // We pass these down or import directly
 
 // We will use optimistic UI in a real polished version, for now we trigger server actions directly
-import { toggleHabit, createHabit } from "@/app/actions"
+import { toggleHabit, createHabit, deleteHabit, updateHabitName } from "@/app/actions"
 import { useRouter } from "next/navigation"
 
 type HabitLog = {
@@ -52,14 +52,121 @@ function getHabitDate(dayIndex: number) {
     return targetDate
 }
 
-export function HabitTracker({ habits }: { habits: Habit[] }) {
+const HabitRow = ({ habit, index }: { habit: Habit, index: number }) => {
     const router = useRouter()
-    const [isAdding, setIsAdding] = React.useState(false)
+    const [isEditing, setIsEditing] = React.useState(false)
+    const [editName, setEditName] = React.useState(habit.title)
+
+    // Calculate completion
+    let completedCount = 0
+    DAYS.forEach((_, dIndex) => {
+        if (isCompleted(habit, dIndex)) completedCount++
+    })
+    const progress = Math.round((completedCount / 7) * 100)
+    const isPerfect = progress === 100
 
     const handleToggle = async (habitId: string, dayIndex: number) => {
         const date = getHabitDate(dayIndex)
         await toggleHabit(habitId, date)
     }
+
+    return (
+        <div
+            className={cn(
+                "grid grid-cols-[200px_repeat(7,1fr)_100px] items-center border-b border-gray-50 last:border-0 hover:bg-white/60 transition-colors group",
+                index % 2 === 0 ? "bg-white/30" : "bg-transparent"
+            )}
+        >
+            <div className="p-3 pl-6 font-medium text-gray-700 truncate flex items-center gap-2">
+                {isEditing ? (
+                    <form
+                        action={async () => {
+                            await updateHabitName(habit.id, editName)
+                            setIsEditing(false)
+                        }}
+                        className="flex-1"
+                    >
+                        <input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onBlur={() => setIsEditing(false)}
+                            autoFocus
+                            className="w-full bg-white/80 border rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#65a34e]"
+                        />
+                        <button type="submit" className="hidden" />
+                    </form>
+                ) : (
+                    <span
+                        onClick={() => setIsEditing(true)}
+                        className="cursor-pointer hover:underline decoration-dotted decoration-[#65a34e]"
+                        title="Click to edit"
+                    >
+                        {habit.title}
+                    </span>
+                )}
+
+                <button
+                    onClick={async (e) => {
+                        if (!confirm("Delete this habit?")) return;
+                        await deleteHabit(habit.id)
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 p-1"
+                    title="Delete Habit"
+                >
+                    <Trash2 className="w-3 h-3" />
+                </button>
+            </div>
+
+            {DAYS.map((_, dIndex) => {
+                const checked = isCompleted(habit, dIndex)
+                return (
+                    <div key={dIndex} className="p-2 flex justify-center">
+                        <button
+                            onClick={() => handleToggle(habit.id, dIndex)}
+                            className={cn(
+                                "w-6 h-6 rounded flex items-center justify-center border transition-all duration-200",
+                                checked
+                                    ? "bg-[#65a34e] border-[#65a34e] text-white shadow-sm hover:bg-[#538a3f]"
+                                    : "bg-transparent border-gray-400 hover:border-[#65a34e]"
+                            )}
+                        >
+                            {checked && <Check className="w-4 h-4" strokeWidth={3} />}
+                        </button>
+                    </div>
+                )
+            })}
+
+            <div className="p-2 pr-6">
+                <div className="flex items-center gap-2 justify-end">
+                    {isPerfect ? (
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="text-amber-500"
+                        >
+                            <Trophy className="w-5 h-5 fill-current" />
+                        </motion.div>
+                    ) : (
+                        <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden relative">
+                            <motion.div
+                                className="h-full bg-[#8bc34a]"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                            />
+                        </div>
+                    )}
+                    <span className={cn("text-xs w-8 text-right font-medium", isPerfect ? "text-amber-600" : "text-gray-600")}>
+                        {isPerfect ? "" : `${progress}%`}
+                    </span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export function HabitTracker({ habits }: { habits: Habit[] }) {
+    const router = useRouter()
+    const [isAdding, setIsAdding] = React.useState(false)
 
     return (
         <Card className="shadow-sm border-none bg-white/50 backdrop-blur-sm overflow-hidden min-h-[300px] flex flex-col">
@@ -106,72 +213,9 @@ export function HabitTracker({ habits }: { habits: Habit[] }) {
                     {/* Habit Rows */}
                     {habits.length === 0 ? (
                         <div className="p-8 text-center text-gray-400">No habits yet. Click + to add one.</div>
-                    ) : habits.map((habit, hIndex) => {
-                        // Count completed within this week view
-                        let completedCount = 0
-                        DAYS.forEach((_, dIndex) => {
-                            if (isCompleted(habit, dIndex)) completedCount++
-                        })
-
-                        const progress = Math.round((completedCount / 7) * 100)
-                        const isPerfect = progress === 100
-
-                        return (
-                            <div
-                                key={habit.id}
-                                className={cn(
-                                    "grid grid-cols-[200px_repeat(7,1fr)_100px] items-center border-b border-gray-50 last:border-0 hover:bg-white/60 transition-colors",
-                                    hIndex % 2 === 0 ? "bg-white/30" : "bg-transparent"
-                                )}
-                            >
-                                <div className="p-3 pl-6 font-medium text-gray-700 truncate">{habit.title}</div>
-
-                                {DAYS.map((_, dIndex) => {
-                                    const checked = isCompleted(habit, dIndex)
-                                    return (
-                                        <div key={dIndex} className="p-2 flex justify-center">
-                                            <button
-                                                onClick={() => handleToggle(habit.id, dIndex)}
-                                                className={cn(
-                                                    "w-6 h-6 rounded flex items-center justify-center border transition-all duration-200",
-                                                    checked
-                                                        ? "bg-[#65a34e] border-[#65a34e] text-white shadow-sm hover:bg-[#538a3f]"
-                                                        : "bg-transparent border-gray-400 hover:border-[#65a34e]"
-                                                )}
-                                            >
-                                                {checked && <Check className="w-4 h-4" strokeWidth={3} />}
-                                            </button>
-                                        </div>
-                                    )
-                                })}
-
-                                <div className="p-2 pr-6">
-                                    <div className="flex items-center gap-2 justify-end">
-                                        {isPerfect ? (
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="text-amber-500"
-                                            >
-                                                <Trophy className="w-5 h-5 fill-current" />
-                                            </motion.div>
-                                        ) : (
-                                            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden relative">
-                                                <motion.div
-                                                    className="h-full bg-[#8bc34a]"
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${progress}%` }}
-                                                />
-                                            </div>
-                                        )}
-                                        <span className={cn("text-xs w-8 text-right font-medium", isPerfect ? "text-amber-600" : "text-gray-600")}>
-                                            {isPerfect ? "" : `${progress}%`}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    })}
+                    ) : habits.map((habit, hIndex) => (
+                        <HabitRow key={habit.id} habit={habit} index={hIndex} />
+                    ))}
                 </div>
             </CardContent>
         </Card>

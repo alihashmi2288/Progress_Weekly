@@ -201,9 +201,14 @@ export async function addNote(formData: FormData) {
     revalidatePath("/dashboard")
 }
 
+
 export async function deleteNote(noteId: string) {
     await protectRoute()
-    await prisma.note.delete({ where: { id: noteId } })
+    try {
+        await prisma.note.delete({ where: { id: noteId } })
+    } catch (error: any) {
+        if (error.code !== 'P2025') throw error
+    }
     revalidatePath("/dashboard")
 }
 
@@ -235,4 +240,42 @@ export async function registerUser(formData: FormData) {
             password: hashedPassword
         }
     })
+}
+
+export async function deleteHabit(habitId: string) {
+    await protectRoute()
+    try {
+        await prisma.habit.delete({ where: { id: habitId } })
+    } catch (error: any) {
+        if (error.code !== 'P2025') throw error
+    }
+    revalidatePath("/dashboard")
+}
+
+export async function updateHabitName(habitId: string, newName: string) {
+    await protectRoute()
+    await prisma.habit.update({
+        where: { id: habitId },
+        data: { title: newName }
+    })
+    revalidatePath("/dashboard")
+}
+
+export async function deleteTask(taskId: string) {
+    await protectRoute()
+    try {
+        await prisma.task.delete({ where: { id: taskId } })
+    } catch (error: any) {
+        if (error.code !== 'P2025') throw error
+    }
+    revalidatePath("/dashboard")
+}
+
+export async function updateTaskTitle(taskId: string, newTitle: string) {
+    await protectRoute()
+    await prisma.task.update({
+        where: { id: taskId },
+        data: { title: newTitle }
+    })
+    revalidatePath("/dashboard")
 }
