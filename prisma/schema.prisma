@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String? // Nullable if using OAuth only, but we'll likely support credentials
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  habits      Habit[]
+  weeklyPlans WeeklyPlan[]
+  tasks       Task[]
+  notes       Note[]
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  color     String?  @default("bg-yellow-100")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Habit {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  frequency   String[] // Array of days, e.g., ["Mon", "Tue"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs HabitLog[]
+}
+
+model HabitLog {
+  id        String   @id @default(cuid())
+  habitId   String
+  date      DateTime // Date of completion
+  completed Boolean  @default(false)
+  
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+}
+
+model WeeklyPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  startDate DateTime
+  endDate   DateTime
+  quote     String?  @default("Inspiration comes only during work")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  isCompleted Boolean  @default(false)
+  category    String?  // e.g., "Work", "Personal"
+  dueDate     DateTime?
+  dayOfWeek   String?  // "Monday", "Tuesday", etc.
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
